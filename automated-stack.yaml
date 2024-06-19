@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Automatic Sync Amazon Bedrock Knowledge Base Ingestion. v0.0.1
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Name of the S3 bucket for the knowledge base
+
+Resources:
+
+  # IAM Role for the Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+
+  # Lambda Function to trigger Bedrock Ingestion
+  BedrocKIngestionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+
+          bedrock = boto3.client('bedrock')
+
+          def lambda_handler(event, context):
+              bedrock.start_ingestion_job(
+                  sourceArn=event['Records'][0]['s3']['object']['key']
+              )
+              return {
+                  'statusCode': 200,
+                  'body': 'Ingestion job started'
+              }
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  # EventBridge Rule to trigger the Lambda function
+  BedrocKIngestionEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - "aws.s3"
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket-name:
+            - !Ref S3BucketName
+      Targets:
+        - Arn: !GetAtt BedrocKIngestionFunction.Arn
+          Id: BedrocKIngestionFunction
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref BedrocKIngestionFunction
+  EventRuleName:
+    Description: Name of the EventBridge rule
+    Value: !Ref BedrocKIngestionEventRule
