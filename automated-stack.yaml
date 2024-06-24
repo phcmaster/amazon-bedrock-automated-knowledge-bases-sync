@@ -6,17 +6,17 @@ Parameters:
     Type: String
     Description: Name of the S3 bucket for the knowledge base
 
-    DataSourceId:
-      Type: String
-      MinLength: 1
-      MaxLength: 10
-      Description: Data source ID from knowledge base
+  DataSourceId:
+    Type: String
+    MinLength: 1
+    MaxLength: 10
+    Description: Data source ID from knowledge base
 
-    KnowledgeBaseId:
-      Type: String
-      MinLength: 1
-      MaxLength: 10
-      Description: knowledgeBaseId ID from knowledge base
+  KnowledgeBaseId:
+    Type: String
+    MinLength: 1
+    MaxLength: 10
+    Description: knowledgeBaseId ID from knowledge base
 
 Resources:
 
@@ -47,7 +47,6 @@ Resources:
           import json
           import os
           import uuid
-          import logging
 
           bedrock = boto3.client('bedrock-agent')
 
@@ -67,8 +66,6 @@ Resources:
                   knowledgeBaseId= knowledgeBaseId
 
               )
-              
-              logger.info(description)
               
               return {
                   'statusCode': 200,
