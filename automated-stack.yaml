@@ -47,6 +47,10 @@ Resources:
           import json
           import os
           import uuid
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
 
           bedrock = boto3.client('bedrock-agent')
 
@@ -55,22 +59,27 @@ Resources:
 
           def lambda_handler(event, context):
               
-              s3bucketName = event['Records'][0]['s3']['bucket']['name']
-              
+              s3bucketName = event['detail']['bucket']['name']
               description = 'new object received at {0} bucket.'.format(s3bucketName)
+            
+              try:
+                  bedrock.start_ingestion_job(
+                      clientToken= str(uuid.uuid4()),
+                      dataSourceId= dataSourceId,
+                      description= description,
+                      knowledgeBaseId= knowledgeBaseId
               
-              bedrock.start_ingestion_job(
-                  clientToken= str(uuid.uuid4()),
-                  dataSourceId= dataSourceId,
-                  description= description,
-                  knowledgeBaseId= knowledgeBaseId
-
-              )
-              
+                      )
+                  logger.info('Ingestion job started for knowledgeBaseId=%s', knowledgeBaseId)
+              except Exception as e:
+                  logger.error('Error starting ingestion job: %s', str(e))
+                  raise
+            
               return {
                   'statusCode': 200,
-                  'body': json.dumps('Ingestion job started for knowledgeBaseId={0}'.format(knowledgeBaseId))
+                  'body': json.dumps('Ingestion job started for knowledgeBaseId=%s', knowledgeBaseId)
               }
+
       Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
